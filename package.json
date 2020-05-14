@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/tomaszguzialek/github-exporter/issues"
   },
-  "homepage": "https://github.com/tomaszguzialek/github-exporter#readme"
+  "homepage": "https://github.com/tomaszguzialek/github-exporter#readme",
+  "dependencies": {
+    "puppeteer": "^3.0.4"
+  }
 }
