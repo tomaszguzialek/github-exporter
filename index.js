@@ -1,6 +1,7 @@
 const yargs = require('yargs');
 const fs = require('fs').promises;
 const puppeteer = require('puppeteer');
+const { Octokit } = require("@octokit/rest");
 
 
 async function readJsonFile(path) {
@@ -22,8 +23,31 @@ async function savePageAsPdf(url, outputFilename, headers = undefined) {
     await browser.close();
 }
 
-async function main() {
-    const argv = yargs
+async function listRepos(personalAccessToken, owner) {
+    const octokit = new Octokit({
+        auth: personalAccessToken
+    });
+
+    const repos = await octokit.paginate(
+        'GET /user/repos'
+    );
+
+    const filteredRepos = repos.filter(x => x.owner.login === owner);
+
+    const repoNames = filteredRepos.map(x => x.name);
+    return repoNames;
+}
+
+async function main() {    
+    yargs
+        .command({
+            command: 'list-repos <personal-access-token> <owner>',
+            desc: 'Lists repositories for given owner (organization)',
+            handler: async (argv) => {
+                const repoList = await listRepos(argv.personalAccessToken, argv.owner);
+                console.log(repoList);
+            }
+        })
         .command({
             command: 'save-pdf [output] [headers-json-file] <url>',
             desc: 'Save a PDF file from a page',
