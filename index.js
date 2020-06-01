@@ -2,6 +2,7 @@ const yargs = require('yargs');
 const fs = require('fs').promises;
 const puppeteer = require('puppeteer');
 const { Octokit } = require("@octokit/rest");
+const moment = require('moment');
 
 
 async function readJsonFile(path) {
@@ -38,7 +39,7 @@ async function listRepos(personalAccessToken, owner) {
     return repoNames;
 }
 
-async function listPullRequests(personalAccessToken, owner, repo, assignee) {
+async function listPullRequests(personalAccessToken, owner, repo, assignee, month) {
     const octokit = new Octokit({
         auth: personalAccessToken
     });
@@ -54,6 +55,15 @@ async function listPullRequests(personalAccessToken, owner, repo, assignee) {
     var filteredPulls = pulls;
     if (assignee) {
         filteredPulls = pulls.filter(x => x.assignee && x.assignee.login === assignee);
+    }
+
+    if (month) {
+        const startOfTheMonth = moment(month, "YYYY-MM");
+        const endOfTheMonth = moment(month, "YYYY-MM").add(1, 'month');
+        filteredPulls = filteredPulls.filter(x => {
+            const createdAt = moment(x.created_at);
+            return createdAt >= startOfTheMonth && createdAt < endOfTheMonth;
+        });
     }
     
 
@@ -71,8 +81,8 @@ async function main() {
             }
         })
         .command({
-            command: 'list-prs <personal-access-token> <owner> <assignee>',
-            desc: 'Lists pull requests for repositories owned by given owner (organization) and assigned to given assignee',
+            command: 'list-prs <personal-access-token> <owner> <assignee> <month>',
+            desc: 'Lists pull requests for repositories owned by given owner (organization) and assigned to given assignee, created in given month',
             handler: async (argv) => {
                 const repoList = await listRepos(argv.personalAccessToken, argv.owner);
                 console.log("Fetched " + repoList.length + " repositories...");
@@ -80,7 +90,7 @@ async function main() {
                 for (let i = 0; i < repoList.length; i++) {
                     const repo = repoList[i];
                     console.log("Processing repository " + repo + " (" + i + "/" + repoList.length + ")...");
-                    const pulls = await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee);
+                    const pulls = await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee, argv.month);
                     console.log(pulls);
                 }
             }
