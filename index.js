@@ -10,16 +10,24 @@ async function readJsonFile(path) {
     return JSON.parse(binaryData);
 }
 
-async function savePageAsPdf(url, outputFilename, headers = undefined) {
+async function savePageScreenshot(url, outputFilename, headers = undefined) {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
+
+    await page.setViewport({
+        width: 1920,
+        height: 1080
+    });
     
     if (headers) {
         page.setExtraHTTPHeaders(headers);
     }
 
     await page.goto(url);
-    await page.pdf({path: outputFilename});
+    await page.screenshot({
+        path: outputFilename,
+        fullPage: true
+    });
 
     await browser.close();
 }
@@ -96,16 +104,16 @@ async function main() {
             }
         })
         .command({
-            command: 'save-pdf [output] [headers-json-file] <url>',
+            command: 'save-screenshot [output] [headers-json-file] <url>',
             desc: 'Save a PDF file from a page',
-            builder: (yargs) => yargs.default('output', 'output.pdf').default('headers-json-file', undefined),
+            builder: (yargs) => yargs.default('output', 'output.png').default('headers-json-file', undefined),
             handler: async (argv) => {
                 let headers = undefined;
                 if (argv.headersJsonFile) {
                     headers = await readJsonFile(argv.headersJsonFile);
                 }
                 
-                await savePageAsPdf(argv.url, argv.output, headers);
+                await savePageScreenshot(argv.url, argv.output, headers);
             }
         }) 
         .help()
