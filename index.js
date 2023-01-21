@@ -78,6 +78,29 @@ async function listPullRequests(personalAccessToken, owner, repo, assignee, mont
     return filteredPulls;
 }
 
+function asyncSleep(timeInMs) {
+    return new Promise(resolve => setTimeout(resolve, timeInMs));
+}
+
+async function retry(funcParam, attempts = 5) {
+    let attempt = 1;
+    
+    while (true) {
+        try {
+            return await funcParam();
+        } catch (ex) {
+            if (attempt <= attempts) {
+                console.log("Retrying " + funcParam + " after sleeping " + attempt * 1000 + "ms...");
+                await asyncSleep(attempt * 1000);
+                attempt++;
+            } else {
+                console.log("Gave up on " + funcParam + "...");
+                throw ex;
+            }
+        }
+    } 
+}
+
 async function main() {    
     yargs
         .command({
@@ -100,6 +123,40 @@ async function main() {
                     console.log("Processing repository " + repo + " (" + i + "/" + repoList.length + ")...");
                     const pulls = await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee, argv.month);
                     console.log(pulls.map(p => p.html_url));
+                }
+            }
+        })
+        .command({
+            command: 'export-prs <personal-access-token> [headers-json-file] <owner> <assignee> <month>',
+            desc: 'Exports pull requests for repositories owned by given owner (organization) and assigned to given assignee, created in given month',
+            builder: (yargs) => yargs.default('headers-json-file', undefined),
+            handler: async (argv) => {
+                let headers = undefined;
+                if (argv.headersJsonFile) {
+                    headers = await readJsonFile(argv.headersJsonFile);
+                }
+
+                const repoList = await listRepos(argv.personalAccessToken, argv.owner);
+                console.log("Fetched " + repoList.length + " repositories...");
+
+                for (let i = 0; i < repoList.length; i++) {
+                    const repo = repoList[i];
+                    console.log("Processing repository " + repo + " (" + i + "/" + repoList.length + ")...");
+
+                    await retry(async () => {
+                        const pulls = await retry(async () => {
+                            return await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee, argv.month);
+                        });
+                    
+                        for (let pullRequest of pulls) {
+                            const diffUrl = pullRequest.html_url + "/files";
+                            console.log("\tScreenshotting " + diffUrl);
+                            
+                            await retry(async () => {
+                                await savePageScreenshot(diffUrl, pullRequest.base.repo.name + '#' + pullRequest.number + ".png", headers);
+                            });
+                        }
+                    });
                 }
             }
         })
