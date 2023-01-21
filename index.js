@@ -75,7 +75,7 @@ async function listPullRequests(personalAccessToken, owner, repo, assignee, mont
     }
     
 
-    return filteredPulls.map(x => x.html_url);
+    return filteredPulls;
 }
 
 async function main() {    
@@ -99,7 +99,7 @@ async function main() {
                     const repo = repoList[i];
                     console.log("Processing repository " + repo + " (" + i + "/" + repoList.length + ")...");
                     const pulls = await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee, argv.month);
-                    console.log(pulls);
+                    console.log(pulls.map(p => p.html_url));
                 }
             }
         })
