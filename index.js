@@ -90,11 +90,12 @@ async function retry(funcParam, attempts = 5) {
             return await funcParam();
         } catch (ex) {
             if (attempt <= attempts) {
-                console.log("Retrying " + funcParam + " after sleeping " + attempt * 1000 + "ms...");
-                await asyncSleep(attempt * 1000);
+                const sleepTimeInSeconds = Math.pow(2, attempt) * attempt;
+                console.log("Retrying " + funcParam + " after sleeping " + sleepTimeInSeconds + "s...");
+                await asyncSleep(sleepTimeInSeconds * 1000);
                 attempt++;
             } else {
-                console.log("Gave up on " + funcParam + "...");
+                console.error("Gave up on " + funcParam + "...");
                 throw ex;
             }
         }
