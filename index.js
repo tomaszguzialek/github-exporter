@@ -33,6 +33,7 @@ async function savePageScreenshot(url, outputFilename, headers = undefined) {
 }
 
 async function listRepos(personalAccessToken, owner) {
+    console.log("Listing repositories for owner " + owner + "...");
     const octokit = new Octokit({
         auth: personalAccessToken
     });
