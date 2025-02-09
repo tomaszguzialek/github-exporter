@@ -39,7 +39,10 @@ async function listRepos(personalAccessToken, owner) {
     });
 
     const repos = await octokit.paginate(
-        'GET /user/repos'
+        'GET /user/repos',
+        {
+            per_page: 100
+        }
     );
 
     const filteredRepos = repos.filter(x => x.owner.login === owner);
@@ -57,7 +60,8 @@ async function listPullRequests(personalAccessToken, owner, repo, author, month)
         'GET /repos/:owner/:repo/pulls?state=all',
         {
             owner: owner,
-            repo: repo
+            repo: repo,
+            per_page: 100
         }
     );
 
