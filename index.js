@@ -33,12 +33,16 @@ async function savePageScreenshot(url, outputFilename, headers = undefined) {
 }
 
 async function listRepos(personalAccessToken, owner) {
+    console.log("Listing repositories for owner " + owner + "...");
     const octokit = new Octokit({
         auth: personalAccessToken
     });
 
     const repos = await octokit.paginate(
-        'GET /user/repos'
+        'GET /user/repos',
+        {
+            per_page: 100
+        }
     );
 
     const filteredRepos = repos.filter(x => x.owner.login === owner);
@@ -47,7 +51,7 @@ async function listRepos(personalAccessToken, owner) {
     return repoNames;
 }
 
-async function listPullRequests(personalAccessToken, owner, repo, assignee, month) {
+async function listPullRequests(personalAccessToken, owner, repo, author, month) {
     const octokit = new Octokit({
         auth: personalAccessToken
     });
@@ -56,13 +60,14 @@ async function listPullRequests(personalAccessToken, owner, repo, assignee, mont
         'GET /repos/:owner/:repo/pulls?state=all',
         {
             owner: owner,
-            repo: repo
+            repo: repo,
+            per_page: 100
         }
     );
 
     var filteredPulls = pulls;
-    if (assignee) {
-        filteredPulls = pulls.filter(x => x.assignee && x.assignee.login === assignee);
+    if (author) {
+        filteredPulls = pulls.filter(x => x.user && x.user.login === author);
     }
 
     if (month) {
@@ -113,8 +118,8 @@ async function main() {
             }
         })
         .command({
-            command: 'list-prs <personal-access-token> <owner> <assignee> <month>',
-            desc: 'Lists pull requests for repositories owned by given owner (organization) and assigned to given assignee, created in given month',
+            command: 'list-prs <personal-access-token> <owner> <author> <month>',
+            desc: 'Lists pull requests for repositories owned by given owner (organization) and assigned to given author, created in given month',
             handler: async (argv) => {
                 const repoList = await listRepos(argv.personalAccessToken, argv.owner);
                 console.log("Fetched " + repoList.length + " repositories...");
@@ -122,14 +127,14 @@ async function main() {
                 for (let i = 0; i < repoList.length; i++) {
                     const repo = repoList[i];
                     console.log("Processing repository " + repo + " (" + i + "/" + repoList.length + ")...");
-                    const pulls = await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee, argv.month);
+                    const pulls = await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.author, argv.month);
                     console.log(pulls.map(p => p.html_url));
                 }
             }
         })
         .command({
-            command: 'export-prs <personal-access-token> [headers-json-file] <owner> <assignee> <month>',
-            desc: 'Exports pull requests for repositories owned by given owner (organization) and assigned to given assignee, created in given month',
+            command: 'export-prs <personal-access-token> [headers-json-file] <owner> <author> <month>',
+            desc: 'Exports pull requests for repositories owned by given owner (organization) and assigned to given author, created in given month',
             builder: (yargs) => yargs.default('headers-json-file', undefined),
             handler: async (argv) => {
                 let headers = undefined;
@@ -146,7 +151,7 @@ async function main() {
 
                     await retry(async () => {
                         const pulls = await retry(async () => {
-                            return await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.assignee, argv.month);
+                            return await listPullRequests(argv.personalAccessToken, argv.owner, repo, argv.author, argv.month);
                         });
                     
                         for (let pullRequest of pulls) {
