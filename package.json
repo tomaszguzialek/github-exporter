@@ -19,7 +19,7 @@
   "dependencies": {
     "@octokit/rest": "^21.1.1",
     "moment": "^2.29.4",
-    "puppeteer": "^3.0.4",
+    "puppeteer": "^24.37.5",
     "yargs": "^15.3.1"
   }
 }
